@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -16,6 +17,7 @@ type InputConfig struct {
 	Since   string   `json:"since"`
 	Until   string   `json:"until"`
 	MaxAbs  int32    `json:"maxAbs"`
+	Pattern string   `json:"pattern"`
 }
 
 func check(e error) {
@@ -48,7 +50,9 @@ func main() {
 	until, err := time.Parse(time.DateOnly, input.Until)
 	check(err)
 
+	pattern, err := regexp.Compile(input.Pattern)
 	check(err)
+
 	for _, repoPath := range input.Repos {
 		repo, err := git.PlainOpen(repoPath)
 		check(err)
@@ -63,10 +67,12 @@ func main() {
 			stats, err := commit.Stats()
 
 			if err == nil {
-				fmt.Println(commit.Message)
+				fmt.Println(commit.Author.Email, "\t", commit.Author.When.Format(time.DateTime))
 
 				for _, stat := range stats {
-					fmt.Printf("%d\t%d\t%s\n", stat.Addition, stat.Deletion, stat.Name)
+					if pattern.MatchString(stat.Name) {
+						fmt.Printf("+%d\t-%d\t%s\n", stat.Addition, stat.Deletion, stat.Name)
+					}
 				}
 			}
 
