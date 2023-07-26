@@ -28,12 +28,17 @@ type GitStatSum struct {
 	Addition     int
 	Deletion     int
 	Modification int
+	CommitCount  int
 }
 
 func (sum *GitStatSum) Append(fileStat *object.FileStat) {
 	sum.Addition += fileStat.Addition
 	sum.Deletion += fileStat.Deletion
 	sum.Modification += fileStat.Addition - fileStat.Deletion
+}
+
+func (sum *GitStatSum) PlusCommit(_ *object.Commit) {
+	sum.CommitCount += 1
 }
 
 type GitStatByDate struct {
@@ -56,6 +61,8 @@ func (byDate *GitStatByDate) Append(commit *object.Commit, pattern *regexp.Regex
 		byDate.stats[dateKey] = sum
 	}
 
+	sum.PlusCommit(commit)
+
 	// for loop file changes
 	fileStats, err := commit.Stats()
 
@@ -76,6 +83,7 @@ func (byDate *GitStatByDate) Summary(maxAbsPerDate int) GitStatSum {
 			sum.Addition += NumberInAbs(stat.Addition, maxAbsPerDate)
 			sum.Deletion += NumberInAbs(stat.Deletion, maxAbsPerDate)
 			sum.Modification += NumberInAbs(stat.Modification, maxAbsPerDate)
+			sum.CommitCount += stat.CommitCount
 		}
 	}
 
@@ -121,14 +129,20 @@ func (byEmail *GitStatByEmail) Summary(maxAbsPerDate int) {
 	sort.Strings(keys)
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Email", "Addition", "Deletion", "Modification"})
+	table.SetHeader([]string{"Email", "Add", "Delete", "Modify", "Commit"})
 
 	for _, email := range keys {
 		byDate, ok := byEmail.stats[email]
 
 		if ok {
 			sum := byDate.Summary(maxAbsPerDate)
-			table.Append([]string{email, strconv.Itoa(sum.Addition), strconv.Itoa(sum.Deletion), strconv.Itoa(sum.Modification)})
+			table.Append([]string{
+				email,
+				strconv.Itoa(sum.Addition),
+				strconv.Itoa(sum.Deletion),
+				strconv.Itoa(sum.Modification),
+				strconv.Itoa(sum.CommitCount),
+			})
 			// fmt.Printf("%s +%d -%d %d \n", email, sum.Addition, sum.Deletion, sum.Modification)
 		}
 	}
