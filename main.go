@@ -12,11 +12,12 @@ import (
 )
 
 type InputConfig struct {
-	Repos   []string `json:"repos"`
-	Since   string   `json:"since"`
-	Until   string   `json:"until"`
-	MaxAbs  int32    `json:"maxAbs"`
-	Pattern string   `json:"pattern"`
+	Repos     []string `json:"repos"`
+	Since     string   `json:"since"`
+	Until     string   `json:"until"`
+	MaxAbs    int32    `json:"maxAbs"`
+	SkipMerge bool     `json:"skipMerge"`
+	Pattern   string   `json:"pattern"`
 }
 
 func check(e error) {
@@ -65,6 +66,10 @@ func main() {
 		limitIter := object.NewCommitLimitIterFromIter(commitIter, limitOpt)
 
 		limitIter.ForEach(func(commit *object.Commit) error {
+			if input.SkipMerge && len(commit.ParentHashes) > 1 {
+				return nil
+			}
+
 			byEmail.Append(commit, pattern)
 
 			// stats, err := commit.Stats()
