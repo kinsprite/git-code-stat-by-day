@@ -13,7 +13,6 @@ import (
 
 type InputConfig struct {
 	Repos   []string `json:"repos"`
-	Authors []string `json:"authors"`
 	Since   string   `json:"since"`
 	Until   string   `json:"until"`
 	MaxAbs  int32    `json:"maxAbs"`
@@ -53,6 +52,8 @@ func main() {
 	pattern, err := regexp.Compile(input.Pattern)
 	check(err)
 
+	byEmail := GitStatByEmail{}
+
 	for _, repoPath := range input.Repos {
 		repo, err := git.PlainOpen(repoPath)
 		check(err)
@@ -64,20 +65,25 @@ func main() {
 		limitIter := object.NewCommitLimitIterFromIter(commitIter, limitOpt)
 
 		limitIter.ForEach(func(commit *object.Commit) error {
-			stats, err := commit.Stats()
+			byEmail.Append(commit, pattern)
 
-			if err == nil {
-				fmt.Println(commit.Author.Email, "\t", commit.Author.When.Format(time.DateTime))
+			// stats, err := commit.Stats()
 
-				for _, stat := range stats {
-					if pattern.MatchString(stat.Name) {
-						fmt.Printf("+%d\t-%d\t%s\n", stat.Addition, stat.Deletion, stat.Name)
-					}
-				}
-			}
+			// if err == nil {
+			// 	byEmail.Append(commit, pattern)
+			// 	fmt.Println(commit.Author.Email, "\t", commit.Author.When.Format(time.DateTime))
+
+			// 	for _, stat := range stats {
+			// 		if pattern.MatchString(stat.Name) {
+			// 			fmt.Printf("+%d\t-%d\t%s\n", stat.Addition, stat.Deletion, stat.Name)
+			// 		}
+			// 	}
+
+			// }
 
 			return nil
 		})
 	}
 
+	byEmail.Summary(int(input.MaxAbs))
 }
