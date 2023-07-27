@@ -131,7 +131,7 @@ func (byEmail *GitStatByEmail) Summary(maxAbsPerDate int) {
 	sort.Strings(keys)
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Email", "Add", "Delete", "Modify", "Commits", "Days", "M/D"})
+	table.SetHeader([]string{"Email", "Add", "Delete", "Modify", "Commits", "Days", "A/D", "M/D"})
 
 	for _, email := range keys {
 		byDate, ok := byEmail.stats[email]
@@ -145,6 +145,7 @@ func (byEmail *GitStatByEmail) Summary(maxAbsPerDate int) {
 				strconv.Itoa(sum.Modification),
 				strconv.Itoa(sum.CommitCount),
 				strconv.Itoa(sum.DayCount),
+				strconv.Itoa(sum.Addition / sum.DayCount),
 				strconv.Itoa(sum.Modification / sum.DayCount),
 			})
 			// fmt.Printf("%s +%d -%d %d \n", email, sum.Addition, sum.Deletion, sum.Modification)

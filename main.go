@@ -42,7 +42,7 @@ func main() {
 	err = json.Unmarshal(inputJSON, &input)
 	check(err)
 
-	fmt.Println(input)
+	// fmt.Println(input)
 
 	// time.Parse(time.RFC3339, "2006-01-02T15:04:05+07:00")
 	since, err := time.Parse(time.DateOnly, input.Since)
@@ -57,7 +57,13 @@ func main() {
 
 	for _, repoPath := range input.Repos {
 		repo, err := git.PlainOpen(repoPath)
-		check(err)
+
+		if err != nil {
+			fmt.Println("Open repo FAIL:", repoPath)
+			continue
+		}
+
+		fmt.Println("Open repo OK:", repoPath)
 
 		commitIter, err := repo.CommitObjects()
 		check(err)

@@ -4,5 +4,5 @@
     "until": "2023-07-28",
     "maxAbs": 250,
     "skipMerge": true,
-    "pattern": ".+\\.(jsx?|tsx?|vue|go|dart|java|rs|py)$"
+    "pattern": ".+\\.(jsx?|tsx?|vue|s?css|less|html|go|dart|java|rs|py)$"
 }
