@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -50,17 +51,25 @@ func main() {
 	until, err := time.Parse(time.DateOnly, input.Until)
 	check(err)
 
-	pattern, err := regexp.Compile(input.Pattern)
-	check(err)
+	repoCount := len(input.Repos)
+	var wgProducers sync.WaitGroup
 
-	byEmail := GitStatByEmail{}
+	wgProducers.Add(repoCount)
+	itemStream := make(chan *GitStatByEmail, repoCount)
 
-	for _, repoPath := range input.Repos {
+	analysisRepo := func(repoPath string) {
+		defer wgProducers.Done()
+
+		startTime := time.Now()
+		byEmail := GitStatByEmail{}
+		pattern, err := regexp.Compile(input.Pattern)
+		check(err)
+
 		repo, err := git.PlainOpen(repoPath)
 
 		if err != nil {
 			fmt.Println("Open repo FAIL:", repoPath)
-			continue
+			return
 		}
 
 		fmt.Println("Open repo OK:", repoPath)
@@ -77,23 +86,24 @@ func main() {
 			}
 
 			byEmail.Append(commit, pattern)
-
-			// stats, err := commit.Stats()
-
-			// if err == nil {
-			// 	byEmail.Append(commit, pattern)
-			// 	fmt.Println(commit.Author.Email, "\t", commit.Author.When.Format(time.DateTime))
-
-			// 	for _, stat := range stats {
-			// 		if pattern.MatchString(stat.Name) {
-			// 			fmt.Printf("+%d\t-%d\t%s\n", stat.Addition, stat.Deletion, stat.Name)
-			// 		}
-			// 	}
-
-			// }
-
 			return nil
 		})
+
+		itemStream <- &byEmail
+		fmt.Println("Analysis repo cost", time.Now().Sub(startTime), ":", repoPath)
+	}
+
+	for _, repoPath := range input.Repos {
+		go analysisRepo(repoPath)
+	}
+
+	wgProducers.Wait()
+	close(itemStream)
+
+	byEmail := GitStatByEmail{}
+
+	for item := range itemStream {
+		byEmail.Add(item)
 	}
 
 	byEmail.Summary(int(input.MaxAbs))

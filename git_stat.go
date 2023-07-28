@@ -42,6 +42,14 @@ func (sum *GitStatSum) PlusCommit(_ *object.Commit) {
 	sum.CommitCount++
 }
 
+func (sum *GitStatSum) Add(other *GitStatSum) {
+	sum.Addition += other.Addition
+	sum.Deletion += other.Deletion
+	sum.Modification += other.Modification
+	sum.CommitCount += other.CommitCount
+	sum.DayCount += other.DayCount
+}
+
 type GitStatByDate struct {
 	// key: Date string
 	stats map[string]*GitStatSum
@@ -73,6 +81,25 @@ func (byDate *GitStatByDate) Append(commit *object.Commit, pattern *regexp.Regex
 				sum.Append(&fileStat)
 			}
 		}
+	}
+}
+
+func (byDate *GitStatByDate) Add(other *GitStatByDate) {
+	// make the map exist
+	if byDate.stats == nil {
+		byDate.stats = make(map[string]*GitStatSum)
+	}
+
+	for dateKey := range other.stats {
+		// make the date sum exist
+		sum, ok := byDate.stats[dateKey]
+
+		if !ok {
+			sum = &GitStatSum{}
+			byDate.stats[dateKey] = sum
+		}
+
+		sum.Add(other.stats[dateKey])
 	}
 }
 
@@ -117,6 +144,25 @@ func (byEmail *GitStatByEmail) Append(commit *object.Commit, pattern *regexp.Reg
 
 	// append to the email's by date
 	byDate.Append(commit, pattern)
+}
+
+func (byEmail *GitStatByEmail) Add(other *GitStatByEmail) {
+	// make the map exist
+	if byEmail.stats == nil {
+		byEmail.stats = make(map[string]*GitStatByDate)
+	}
+
+	for emailKey := range other.stats {
+		// make the email sum exist
+		byDate, ok := byEmail.stats[emailKey]
+
+		if !ok {
+			byDate = &GitStatByDate{}
+			byEmail.stats[emailKey] = byDate
+		}
+
+		byDate.Add(other.stats[emailKey])
+	}
 }
 
 func (byEmail *GitStatByEmail) Summary(maxAbsPerDate int) {
